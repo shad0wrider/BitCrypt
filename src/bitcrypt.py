@@ -2,9 +2,8 @@
 #By shad0wrider.github.io
 #Can encrypt small to large files efficiently and securely
 
-from cryptography.hazmat.primitives import hashes ,hmac ,kdf , serialization , padding as sympadding
+from cryptography.hazmat.primitives import padding as sympadding
 from cryptography.hazmat.primitives.ciphers import Cipher , algorithms , modes
-from cryptography.hazmat.primitives.asymmetric import padding , rsa , types
 from cryptography import fernet
 import time , os , sys , json , io , base64 , getpass
 import salty as mixpass
