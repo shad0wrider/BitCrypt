@@ -1,5 +1,6 @@
-#This is a custom Salting Algorithm used to jumble passwords in a way such that it cannot be gussed back
-#Yet provides the same value every single time
+#This is a Password Extending Algorithm used to Extend inputted passwords in a way such that it extends passwords
+# as small as 6 characters to a jumbled password of 32+ characters
+#This is NOT a hashing algorithm
 
 import time
 import random , secrets , json
