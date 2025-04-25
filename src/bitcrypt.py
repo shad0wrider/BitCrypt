@@ -4,7 +4,7 @@
 #Can encrypt small to large files efficiently and securely
 
 #Whats New: -- 1.Uses Gmac + Hmac for large and small file verification for checking File Integrity
-#              2.Uses New Extremely Efficient Password Extending Algorithm saltyV3
+#              2.Uses New Extremely Efficient Password Extending Algorithm saltyV2
 #              3.Using sha3_512 with 64 bit hmac key , somewhat quantam secure...
 #              4.Dropped AES-CBC alltogether
 
