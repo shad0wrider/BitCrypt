@@ -5,7 +5,7 @@ Even Supports files as big as  1 - 5 gb
 
 **Features**:
 
-1. Uses military grade aes-256 encryption algorithm
+1. Uses military grade , unbreakable and quantam-proof aes-256 encryption algorithm
 2. GCM mode which is a modern stream cipher with built in layer 1 integrity
 3. Added HMAC for 2 layers of un-breakable data integrity.
 4. Password Checking without using the actual digest of the Password
