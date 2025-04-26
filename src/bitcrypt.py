@@ -249,7 +249,8 @@ try:
 
 
     def enc(srcfile:str,filename:str):
-        fileextension = filename.split(".")[1]
+        dotcount = filename.count(".")
+        fileextension = filename.split(".")[dotcount]
         filename = filename.split(".")[0]
         f = open(filename+".byt","wb")
         filesize = os.path.getsize(srcfile)
