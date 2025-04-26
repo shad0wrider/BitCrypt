@@ -2,7 +2,17 @@ This is **BitCrypt** , A program that can efficiently and securely encrypt your 
 
 Even Supports files as big as  1 - 5 gb 
 
-how to use
+
+**Features**:
+
+1. Uses military grade aes-256 encryption algorithm
+2. GCM mode which is a modern stream cipher with built in layer 1 integrity
+3. Added HMAC for 2 layers of un-breakable data integrity.
+4. Password Checking without using the actual digest of the Password
+   
+
+
+How to use
 
 ```python3 bitcrypt.py```
 
