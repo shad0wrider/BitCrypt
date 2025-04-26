@@ -209,7 +209,7 @@ try:
         #Master iv is generated here
      
         try:
-            mainiv = secrets.token_bytes(16)
+            mainiv = os.urandom(16)
             head = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(mainiv)).encryptor()
             #Encrypt Pass Constant
             passencryptor = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(mainiv)).encryptor()
@@ -257,14 +257,14 @@ try:
         try:
             mixkey = askpass()
             if mixkey :
-                iv = secrets.token_bytes(16)
-                enckey = secrets.token_bytes(32)
+                iv = os.urandom(16)
+                enckey = os.urandom(32)
                 mixdat = enckey+iv
                 if os.path.getsize(srcfile) < 212806066:
 
                     #Small File Mode
                     print("small file mode")
-                    hmckey = secrets.token_bytes(64)
+                    hmckey = os.urandom(64)
                     far = headercreate(data=mixdat,key=mixkey,filetype=fileextension.encode('utf-8'),bitcrypt_version=version.encode('utf-8'),etype=b'smoll',hmac_secret_key=hmckey)
                     if far:
                         f.write(far)
@@ -289,7 +289,7 @@ try:
                 else:
                         
                         #Large File Mode
-                        hmckey = secrets.token_bytes(64)
+                        hmckey = os.urandom(64)
                         print("Large file mode")
                         far = headercreate(data=mixdat,key=mixkey,filetype=fileextension.encode('utf-8'),bitcrypt_version=version.encode('utf-8'),etype=b'biigg',hmac_secret_key=hmckey)
                         if far:
