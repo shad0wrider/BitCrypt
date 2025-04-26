@@ -4,7 +4,7 @@
 #Can encrypt small to large files efficiently and securely
 
 #Whats New: -- 1.Uses Gmac + Hmac for large and small file verification for checking File Integrity
-#              2.Uses New Extremely Efficient Password Extending Algorithm saltyV2
+#              2.Uses New Extremely Efficient Password Extending Algorithm saltyV3
 #              3.Using sha3_512 with 64 bit hmac key , somewhat quantam secure...
 #              4.Dropped AES-CBC alltogether
 
@@ -15,13 +15,10 @@ import hmac , hashlib , base64 as b64
 from cryptography.hazmat.primitives import hashes, serialization , padding as sympadding
 from cryptography.hazmat.primitives.ciphers import Cipher , algorithms , modes
 from cryptography.exceptions import InvalidKey , InvalidSignature , InvalidTag
-import json , io , base64 , getpass , math
+import time , os , sys , json , io , base64 , getpass , math
 import saltyv2 as mixpass
-import gc
+import secrets , gc
 from colorama import Fore , Style , Back
-
-
-
 
 
 version = "v5.25-4-25"
@@ -82,6 +79,9 @@ try:
             
         except Exception as ia:
             return 1
+        
+    def recovery():
+        pass
 
 
 
@@ -210,15 +210,18 @@ try:
      
         try:
             mainiv = os.urandom(16)
+            hmkeyiv = os.urandom(16)
+            passconsiv = os.urandom(16)
             head = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(mainiv)).encryptor()
             #Encrypt Pass Constant
-            passencryptor = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(mainiv)).encryptor()
+            passencryptor = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(passconsiv)).encryptor()
+            hmkeyencryptor = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(hmkeyiv)).encryptor()
             finalpass = passencryptor.update(b64.standard_b64encode(passconstant))+passencryptor.finalize()
             #Encrypt Pass Constant Done
             datacrypt = head.update(data)
-            enchmackey = head.update(hmac_secret_key)
+            enchmackey = hmkeyencryptor.update(hmac_secret_key)
             head.finalize()
-            return b'hs0X'+mainiv+datacrypt+b'tys0X'+filetype+b'tye0X'+b'pskys0X'+finalpass+b'pskye0X'+b'bvs0X'+bitcrypt_version+b'bve0X'+b'extys0X'+etype+b'extye0X'+b'hmkys0X'+enchmackey+b'hmkye0X'+b'he0X'
+            return b'hs0X'+mainiv+datacrypt+b'tys0X'+filetype+b'tye0X'+b'pskys0X'+finalpass+b'pskye0X'+b'pskysiv0X'+passconsiv+b'pskyeiv0X'+b'bvs0X'+bitcrypt_version+b'bve0X'+b'extys0X'+etype+b'extye0X'+b'hmkys0X'+enchmackey+b'hmkye0X'+b'hmkysiv0X'+hmkeyiv+b'hmkyeiv0X'+b'he0X'
         
         except Exception as ka:
             return ka
@@ -340,23 +343,32 @@ try:
                     print(Fore.GREEN+"File is a BitCrypt File"+Fore.RESET)
                     fileheader = open(srcfile,"rb")
                     headers = fileheader.read()
-                    encpsval = headers[headers.index(b'pskys0X')+len(b'pskys0X'):headers.index(b'pskye0X')]
-                    start = headers.index(b'ds0X')
-                    end = headers.index(b'de0X')
-                    mainheaders = headers[4:68]
-                    masteriv = mainheaders[:16]
-                    datacrypt = mainheaders[16:64]
+                    try:
+                        encpsval = headers[headers.index(b'pskys0X')+len(b'pskys0X'):headers.index(b'pskye0X')]
+                        start = headers.index(b'ds0X')
+                        end = headers.index(b'de0X')
+                        hmkey = headers[headers.index(b'hmkys0X')+len(b'hmkys0X'):headers.index(b'hmkye0X')]
+                        passconsiv = headers[headers.index(b'pskysiv0X')+len(b'pskysiv0X'):headers.index(b'pskyeiv0X')]
+                        hmkeyiv = headers[headers.index(b'hmkysiv0X')+len(b'hmkysiv0X'):headers.index(b'hmkyeiv0X')]
+                        mainheaders = headers[4:68]
+                        masteriv = mainheaders[:16]
+                        datacrypt = mainheaders[16:64]
+                    except ValueError as iae:
+                        print(Fore.RED+"File Header is Corrupted :(\n Try Recovery Mode"+Fore.RESET)
+                        return shell()
                     decryptfilesize = os.path.getsize(srcfile)
                     passkey = getpass.getpass("Enter Decryption Password: ")
                     mixkey = mixpass.passmixer(password=passkey)[:32].encode('utf-8')
                     #Decrypting File Key and IV
-                    decipher = Cipher(algorithm=algorithms.AES256(mixkey),mode=modes.CTR(masteriv)).decryptor()
+                    decipher = Cipher(algorithm=algorithms.AES256(mixkey),mode=modes.CTR(passconsiv)).decryptor()
                     datadecipher = Cipher(algorithm=algorithms.AES256(mixkey),mode=modes.CTR(masteriv)).decryptor()
+                    hmkeydecipher = Cipher(algorithm=algorithms.AES256(mixkey),mode=modes.CTR(hmkeyiv)).decryptor()
 
                     passcons = decipher.update(encpsval)
                     if chkpass(passcons) == 0:
                         print(Fore.GREEN+"Correct Password Entered...Decrypting File"+Fore.RESET)
-                  
+
+                        tmphmkey = hmkeydecipher.update(hmkey)
                    
                         decinfo = datadecipher.update(datacrypt)
                         datadecipher.finalize()
@@ -391,7 +403,7 @@ try:
                             # passkey , mixkey , df , decinfo , ekey , ivv , pcmp = 0
                             outfile.close()
                             print("\n")
-                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
+                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(srcfile).replace(".byt",''))
 
                         else:
                             print("large file mode")
@@ -424,7 +436,7 @@ try:
                             print("\n")
                             decryptcipher.finalize()
                             filedec.close()
-                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
+                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(srcfile).replace(".byt",''))
                     else:
                         print(Fore.RED+"Wrong Password Entered :("+Fore.RESET)
 
@@ -505,5 +517,6 @@ try:
 except Exception as aps:
     print(aps,"occured...")
     shell()
+
 except KeyboardInterrupt as ao:
     print("Exiting..on keyboard interrupt..")
