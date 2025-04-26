@@ -403,7 +403,7 @@ try:
                             # passkey , mixkey , df , decinfo , ekey , ivv , pcmp = 0
                             outfile.close()
                             print("\n")
-                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(srcfile).replace(".byt",''))
+                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
 
                         else:
                             print("large file mode")
@@ -436,7 +436,7 @@ try:
                             print("\n")
                             decryptcipher.finalize()
                             filedec.close()
-                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(srcfile).replace(".byt",''))
+                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext)
                     else:
                         print(Fore.RED+"Wrong Password Entered :("+Fore.RESET)
 
