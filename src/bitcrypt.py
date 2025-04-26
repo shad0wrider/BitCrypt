@@ -15,9 +15,9 @@ import hmac , hashlib , base64 as b64
 from cryptography.hazmat.primitives import hashes, serialization , padding as sympadding
 from cryptography.hazmat.primitives.ciphers import Cipher , algorithms , modes
 from cryptography.exceptions import InvalidKey , InvalidSignature , InvalidTag
-import time , os , sys , json , io , base64 , getpass , math
+import json , io , base64 , getpass , math
 import saltyv2 as mixpass
-import secrets , gc
+import gc
 from colorama import Fore , Style , Back
 
 
