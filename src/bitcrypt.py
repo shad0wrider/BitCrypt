@@ -37,8 +37,6 @@ showinfo - Show Header Info
 
 try:
     passconstant = b'seckeyok'
-    print(Fore.RED+"NOTE:!!!\nThis Version of bitcrypt Does not have the HMAC verification Feature"+Fore.RESET)
-
 
     def verify(srcfile:str):
         veri = open(srcfile,"rb").read()
