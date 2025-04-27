@@ -11,7 +11,7 @@
 #Info : Master iv is generated when headercreate function is called
 
 import secrets , time , os , sys
-import hmac , hashlib , base64 as b64
+import argon2 , hmac , hashlib , base64 as b64
 from cryptography.hazmat.primitives import hashes, serialization , padding as sympadding
 from cryptography.hazmat.primitives.ciphers import Cipher , algorithms , modes
 from cryptography.exceptions import InvalidKey , InvalidSignature , InvalidTag
@@ -21,7 +21,10 @@ import secrets , gc
 from colorama import Fore , Style , Back
 
 
-version = "v5.25-4-25"
+
+
+
+version = "v5.27-4-25"
 
 
 help = """
@@ -84,13 +87,43 @@ try:
         pass
 
 
+    def genpass(passw:bytes,saltoriv:bytes):
+        """
+        saltoriv: This is the master iv/salt and should be 16 bytes minimum
+        """
+        tmpmaspas = argon2.hash_password(
+            password=passw,
+            salt=saltoriv,
+            time_cost=argon2.DEFAULT_TIME_COST,
+            memory_cost=argon2.DEFAULT_MEMORY_COST,
+            parallelism=argon2.DEFAULT_PARALLELISM,
+            hash_len=32,
+            type=argon2.Type.ID
+        )
 
-    def hashverifier(srcfile:str,filetypem:str,hmackey:bytes):
+        dollarcount = tmpmaspas.count(b'$')
+        tmpparse = tmpmaspas.split(b'$')[dollarcount]
+        if len(tmpparse)%4 !=0:
+            tmpparse = tmpparse + b'='*(4-len(tmpparse)%4)
+        try:
+            themaskey = b64.b64decode(tmpparse)
+            return themaskey
+        except Exception as eor:
+            print("Master Key generation Failed :( , Line 111")
+            return 1
+
+
+
+
+    def hashverifier(srcfile:str,hmackey:bytes):
         filecheck = open(srcfile,"rb")
 
         try:
+            tmp = filecheck.read()
+            filetypem = tmp[tmp.index(b'extys0X')+len(b'extys0X'):tmp.index(b'extye0X')].decode('utf-8')
 
             if filetypem =="smoll":
+                filecheck.seek(0)
                 data = filecheck.read()
                 filehmachash = data[data.index(b'ihms0X')+len(b'ihms0X'):data.index(b'ihme0X')]
                 endpoint = data.rindex(b'ihms0X')
@@ -106,10 +139,12 @@ try:
                     return 1
                 
             elif filetypem =="biigg":
+                filecheck.seek(0)
                 data = filecheck.read()
                 filehmachash = data[data.index(b'ihms0X')+len(b'ihms0X'):data.index(b'ihme0X')]
                 calculatehmac = hmac.new(key=hmackey,digestmod=hashlib.sha3_512)
                 endpoint = data.rindex(b'ihms0X')
+                filecheck.seek(0)
                 while True:
                     filepos = filecheck.tell()
                     if filepos < endpoint:
@@ -119,10 +154,10 @@ try:
                     else:
                         break
                 if hmac.compare_digest(filehmachash,calculatehmac.digest()):
-                    print(Fore.GREEN+"File Integrity Check: Passed"+Fore.RESET)
+                    print(Fore.GREEN+"HMAC Integrity Check: Passed"+Fore.RESET)
                     return 0
                 else:
-                    print(Fore.RED+"File Integrity Check: Failed"+Fore.RESET)
+                    print(Fore.RED+"HMAC Integrity Check: Failed"+Fore.RESET)
                     return 1
 
 
@@ -189,7 +224,8 @@ try:
 
                     if filepointer < tmpfilesize:
                         chunksize = min(4096,tmpfilesize-filepointer)
-                        hmhash.update(hashfile.read(chunksize))
+                        tmphashdata = hashfile.read(chunksize)
+                        hmhash.update(tmphashdata)
                     else:
                         break
 
@@ -210,18 +246,26 @@ try:
      
         try:
             mainiv = os.urandom(16)
+            masterkeysalt = os.urandom(16)
             hmkeyiv = os.urandom(16)
             passconsiv = os.urandom(16)
-            head = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(mainiv)).encryptor()
-            #Encrypt Pass Constant
-            passencryptor = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(passconsiv)).encryptor()
-            hmkeyencryptor = Cipher(algorithm=algorithms.AES256(key=key),mode=modes.CTR(hmkeyiv)).encryptor()
-            finalpass = passencryptor.update(b64.standard_b64encode(passconstant))+passencryptor.finalize()
-            #Encrypt Pass Constant Done
-            datacrypt = head.update(data)
-            enchmackey = hmkeyencryptor.update(hmac_secret_key)
-            head.finalize()
-            return b'hs0X'+mainiv+datacrypt+b'tys0X'+filetype+b'tye0X'+b'pskys0X'+finalpass+b'pskye0X'+b'pskysiv0X'+passconsiv+b'pskyeiv0X'+b'bvs0X'+bitcrypt_version+b'bve0X'+b'extys0X'+etype+b'extye0X'+b'hmkys0X'+enchmackey+b'hmkye0X'+b'hmkysiv0X'+hmkeyiv+b'hmkyeiv0X'+b'he0X'
+            #Master Key Generation Using argon2
+            actualmaster = genpass(passw=key,saltoriv=masterkeysalt)
+            if actualmaster !=1:
+            #Generating Master Key Done
+                thekeymaster = actualmaster
+                head = Cipher(algorithm=algorithms.AES256(key=thekeymaster),mode=modes.CTR(mainiv)).encryptor()
+                #Encrypting Pass Constant and Hmac Key
+                passencryptor = Cipher(algorithm=algorithms.AES256(key=thekeymaster),mode=modes.CTR(passconsiv)).encryptor()
+                hmkeyencryptor = Cipher(algorithm=algorithms.AES256(key=thekeymaster),mode=modes.CTR(hmkeyiv)).encryptor()
+                finalpass = passencryptor.update(b64.standard_b64encode(passconstant))+passencryptor.finalize()
+                #Encrypting Pass Constant and Hmac Key Done
+                datacrypt = head.update(data)
+                enchmackey = hmkeyencryptor.update(hmac_secret_key)
+                head.finalize()
+                return b'hs0X'+mainiv+datacrypt+b'mskysslt0X'+masterkeysalt+b'mskyeslt0X'+b'tys0X'+filetype+b'tye0X'+b'pskys0X'+finalpass+b'pskye0X'+b'pskysiv0X'+passconsiv+b'pskyeiv0X'+b'bvs0X'+bitcrypt_version+b'bve0X'+b'extys0X'+etype+b'extye0X'+b'hmkys0X'+enchmackey+b'hmkye0X'+b'hmkysiv0X'+hmkeyiv+b'hmkyeiv0X'+b'he0X'
+            else:
+                print(Fore.RED+"Header Creation Failed , Reason: Master Key Gen Error"+Fore.RESET)
         
         except Exception as ka:
             return ka
@@ -344,12 +388,15 @@ try:
                     fileheader = open(srcfile,"rb")
                     headers = fileheader.read()
                     try:
+                        masterkeyslt = headers[headers.index(b'mskysslt0X')+len(b'mskysslt0X'):headers.index(b'mskyeslt0X')]
                         encpsval = headers[headers.index(b'pskys0X')+len(b'pskys0X'):headers.index(b'pskye0X')]
                         start = headers.index(b'ds0X')
                         end = headers.index(b'de0X')
                         hmkey = headers[headers.index(b'hmkys0X')+len(b'hmkys0X'):headers.index(b'hmkye0X')]
                         passconsiv = headers[headers.index(b'pskysiv0X')+len(b'pskysiv0X'):headers.index(b'pskyeiv0X')]
                         hmkeyiv = headers[headers.index(b'hmkysiv0X')+len(b'hmkysiv0X'):headers.index(b'hmkyeiv0X')]
+                        gmactag = headers[headers.index(b'ihgs0X')+len(b'ihgs0X'):headers.index(b'ihge0X')]
+                        filext = headers[headers.index(b'tys0X')+len(b'tys0X'):headers.index(b'tye0X')].decode('utf-8').replace(" ","")
                         mainheaders = headers[4:68]
                         masteriv = mainheaders[:16]
                         datacrypt = mainheaders[16:64]
@@ -359,84 +406,102 @@ try:
                     decryptfilesize = os.path.getsize(srcfile)
                     passkey = getpass.getpass("Enter Decryption Password: ")
                     mixkey = mixpass.passmixer(password=passkey)[:32].encode('utf-8')
-                    #Decrypting File Key and IV
-                    decipher = Cipher(algorithm=algorithms.AES256(mixkey),mode=modes.CTR(passconsiv)).decryptor()
-                    datadecipher = Cipher(algorithm=algorithms.AES256(mixkey),mode=modes.CTR(masteriv)).decryptor()
-                    hmkeydecipher = Cipher(algorithm=algorithms.AES256(mixkey),mode=modes.CTR(hmkeyiv)).decryptor()
+                    #Deriveing the Master Key
+                    tmptopkey = genpass(passw=mixkey,saltoriv=masterkeyslt) 
+                    if tmptopkey !=1:
+                        themasterkey = tmptopkey
+                    else:
+                        print("Master key Derivation Error")
+                        return shell()
+
+                    #Initializing Ciphers 
+                    try:
+                        decipher = Cipher(algorithm=algorithms.AES256(themasterkey),mode=modes.CTR(passconsiv)).decryptor()
+                        datadecipher = Cipher(algorithm=algorithms.AES256(themasterkey),mode=modes.CTR(masteriv)).decryptor()
+                        hmkeydecipher = Cipher(algorithm=algorithms.AES256(themasterkey),mode=modes.CTR(hmkeyiv)).decryptor()
+                    except ValueError as us:
+                        print(Fore.RED+"File Headers are Corrupted :(\nTry Recovery Mode"+Fore.RESET)
 
                     passcons = decipher.update(encpsval)
                     if chkpass(passcons) == 0:
                         print(Fore.GREEN+"Correct Password Entered...Decrypting File"+Fore.RESET)
 
                         tmphmkey = hmkeydecipher.update(hmkey)
-                   
-                        decinfo = datadecipher.update(datacrypt)
-                        datadecipher.finalize()
-                                                    
-                        #File Key and IV
-                        ekey = decinfo[:32]
-                        ivv = decinfo[32:48]
-                        gmactag = headers[headers.index(b'ihgs0X')+len(b'ihgs0X'):headers.index(b'ihge0X')]
-                        filext = headers[headers.index(b'tys0X')+len(b'tys0X'):headers.index(b'tye0X')].decode('utf-8').replace(" ","")
-                        filename = os.path.basename(srcfile).split(".")[0]
-                        #Decryption Mode
-                        if os.path.getsize(srcfile) < 212806066:
-                            print("Small file mode")
-                            with open(filename+"."+filext,'wb') as outfile:
-                                filedata = io.BytesIO(headers[headers.index(b'ds0X')+len(b'ds0X'):headers.index(b'de0X')])
-                                try:                                        
-                                    pcmp = Cipher(algorithm=algorithms.AES256(ekey),mode=modes.GCM(ivv,gmactag)).decryptor()                                
-                                    while decdata := filedata.read():                                    
-                                        datpad = pcmp.update(decdata)
-                                        outfile.write(datpad)
-                                        tmpval = filedata.tell()/decryptfilesize*100
-                                        tmplog = math.floor(tmpval*10)/10
-                                        status = "Progress : "+str(tmplog)+" "+"#"*int(tmplog)
-                                        sys.stdout.write(f"\r{status}")                                  
-                                        sys.stdout.flush()
-                                    pcmp.finalize()
-                                    
-                                except InvalidTag as excep:
-                                    print(Fore.RED+"\nData Has Been Corrupted :("+Fore.RESET)
-                                    print("Error: GCM Verification Failed")
-                                    
-                            # passkey , mixkey , df , decinfo , ekey , ivv , pcmp = 0
-                            outfile.close()
-                            print("\n")
-                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
+                        print("Verifying HMAC File Integrity...")
 
-                        else:
-                            print("large file mode")
-                            filedec =  open(filename+"."+filext,'wb')
-                            filedata = fileheader
-                            filedata.seek(start+4)
-                            try:
-                                decryptcipher = Cipher(algorithm=algorithms.AES256(ekey),mode=modes.GCM(ivv,gmactag)).decryptor()
-                                while True:
-                                    filepointer = filedata.tell()
-                                    if filepointer < end:
-                                        
-                                            chunksize = min(4096,end-filepointer)
-                                            tmpdata = filedata.read(chunksize)
-                                            decryptedata = decryptcipher.update(tmpdata)
-                                            filedec.write(decryptedata)
-                                            tmpval = filepointer/end*100
+                        #Verifying Layer 2 Integrity via HMAC
+                        hashverify = hashverifier(srcfile=srcfile,hmackey=tmphmkey)
+
+                        if hashverify ==0:
+                       
+                            #Decrypting File Key and IV
+                            decinfo = datadecipher.update(datacrypt)
+                            datadecipher.finalize()
+                                                        
+                            #File Key and IV
+                            ekey = decinfo[:32]
+                            ivv = decinfo[32:48]
+                            filename = os.path.basename(srcfile).split(".")[0]
+                            #Decryption Mode
+                            if os.path.getsize(srcfile) < 212806066:
+                                print("Small file mode")
+                                with open(filename+"."+filext,'wb') as outfile:
+                                    filedata = io.BytesIO(headers[headers.index(b'ds0X')+len(b'ds0X'):headers.index(b'de0X')])
+                                    try:                                        
+                                        pcmp = Cipher(algorithm=algorithms.AES256(ekey),mode=modes.GCM(ivv,gmactag)).decryptor()                                
+                                        while decdata := filedata.read():                                    
+                                            datpad = pcmp.update(decdata)
+                                            outfile.write(datpad)
+                                            tmpval = filedata.tell()/decryptfilesize*100
                                             tmplog = math.floor(tmpval*10)/10
                                             status = "Progress : "+str(tmplog)+" "+"#"*int(tmplog)
                                             sys.stdout.write(f"\r{status}")                                  
                                             sys.stdout.flush()
-                                    else:
-                                        break
+                                        pcmp.finalize()
+                                        
+                                    except InvalidTag as excep:
+                                        print(Fore.RED+"\nData Has Been Corrupted :("+Fore.RESET)
+                                        print("Error: GCM Verification Failed")
+                                        
+                                # passkey , mixkey , df , decinfo , ekey , ivv , pcmp = 0
+                                outfile.close()
+                                print("\n")
+                                print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(srcfile).replace(".byt",''))
 
-                            except InvalidTag as eis:
-                                    print(Fore.RED+"\nData Has Been Corrupted :("+Fore.RESET)
-                                    print("Error: GCM Verification Failed")
+                            else:
+                                print("large file mode")
+                                filedec =  open(filename+"."+filext,'wb')
+                                filedata = fileheader
+                                filedata.seek(start+4)
+                                try:
+                                    decryptcipher = Cipher(algorithm=algorithms.AES256(ekey),mode=modes.GCM(ivv,gmactag)).decryptor()
+                                    while True:
+                                        filepointer = filedata.tell()
+                                        if filepointer < end:
+                                            
+                                                chunksize = min(4096,end-filepointer)
+                                                tmpdata = filedata.read(chunksize)
+                                                decryptedata = decryptcipher.update(tmpdata)
+                                                filedec.write(decryptedata)
+                                                tmpval = filepointer/end*100
+                                                tmplog = math.floor(tmpval*10)/10
+                                                status = "Progress : "+str(tmplog)+" "+"#"*int(tmplog)
+                                                sys.stdout.write(f"\r{status}")                                  
+                                                sys.stdout.flush()
+                                        else:
+                                            break
 
-                            # passkey , mixkey , df , decinfo , ekey , ivv = 0
-                            print("\n")
-                            decryptcipher.finalize()
-                            filedec.close()
-                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext)
+                                except InvalidTag as eis:
+                                        print(Fore.RED+"\nData Has Been Corrupted :("+Fore.RESET)
+                                        print("Error: GCM Verification Failed")
+
+                                # passkey , mixkey , df , decinfo , ekey , ivv = 0
+                                print("\n")
+                                decryptcipher.finalize()
+                                filedec.close()
+                                print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(srcfile).replace(".byt",''))
+                        else:
+                            return shell()
                     else:
                         print(Fore.RED+"Wrong Password Entered :("+Fore.RESET)
 
