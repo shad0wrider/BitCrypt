@@ -125,6 +125,7 @@ try:
                 data = filecheck.read()
                 filehmachash = data[data.index(b'ihms0X')+len(b'ihms0X'):data.index(b'ihme0X')]
                 endpoint = data.rindex(b'ihms0X')
+                filecheck.seek(0)
                 datatocheck = io.BytesIO(data[:endpoint])
                 calculatehmac = hmac.new(key=hmackey,digestmod=hashlib.sha3_512)
                 while readit := datatocheck.read():
