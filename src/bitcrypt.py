@@ -39,9 +39,14 @@ try:
     passconstant = b'seckeyok'
 
     def verify(srcfile:str):
-        veri = open(srcfile,"rb").read()
-        endbit = veri[-4::+1]
-        startbit = veri[:4]
+        srcpath = srcfile
+        veri = open(srcpath,"rb",buffering=4096)
+        veri.seek(0)
+        startheader = veri.read(6)
+        startbit = startheader[:4]
+        veri.seek(os.path.getsize(srcpath)-20,0)
+        endheader = veri.read(200)
+        endbit = endheader[-4::+1]
         if endbit ==b'nz0X' and startbit ==b'hs0X':
             return 0
         else:
