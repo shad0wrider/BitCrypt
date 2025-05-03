@@ -24,7 +24,7 @@ from colorama import Fore , Style , Back
 
 
 
-version = "v5.2-5-25"
+version = "v5.3-5-25"
 
 
 help = """
@@ -76,6 +76,7 @@ try:
         return genkey
     
     def chkpass(val:bytes):
+        #A Decryption Function
         try:
             tmpval = b64.standard_b64decode(val)
             if tmpval == passconstant:
@@ -91,6 +92,7 @@ try:
 
 
     def genpass(passw:bytes,saltoriv:bytes):
+        #A Decryption/Encryption Function
         """
         saltoriv: This is the master iv/salt and should be 16 bytes minimum
         """
@@ -119,10 +121,12 @@ try:
 
 
     def hashverifier(srcfile:str,hmackey:bytes):
+        #A Decryption Function
         filecheck = open(srcfile,"rb")
+        tmpfilesize = os.path.getsize(filecheck.name)
 
         try:
-            tmp = filecheck.read()
+            tmp = filecheck.read(4096)
             filetypem = tmp[tmp.index(b'extys0X')+len(b'extys0X'):tmp.index(b'extye0X')].decode('utf-8')
 
             if filetypem =="smoll":
@@ -144,10 +148,11 @@ try:
                 
             elif filetypem =="biigg":
                 filecheck.seek(0)
-                data = filecheck.read()
+                filecheck.seek(tmpfilesize-112,0)
+                data = filecheck.read(4096)
                 filehmachash = data[data.index(b'ihms0X')+len(b'ihms0X'):data.index(b'ihme0X')]
                 calculatehmac = hmac.new(key=hmackey,digestmod=hashlib.sha3_512)
-                endpoint = data.rindex(b'ihms0X')
+                endpoint = tmpfilesize-80
                 filecheck.seek(0)
                 while True:
                     filepos = filecheck.tell()
@@ -281,7 +286,6 @@ try:
                 print("Getting Header Info...")
                 if verify(filepath) ==0:
                     headread = open(filepath,"rb").read()
-
                     filetype = headread[headread.index(b'tys0X')+len(b'tys0X'):headread.index(b'tye0X')]
                     appversion = headread[headread.index(b'bvs0X')+len(b'bvs0X'):headread.index(b'bve0X')]
                     enctype = headread[headread.index(b'extys0X')+len(b'extys0X'):headread.index(b'extye0X')]
@@ -390,24 +394,29 @@ try:
                     #Reading the Headers and decrypting the File Key
                     print(Fore.GREEN+"File is a BitCrypt File"+Fore.RESET)
                     fileheader = open(srcfile,"rb")
-                    headers = fileheader.read()
+                    decfilesize = os.path.getsize(fileheader.name)
+                    headers = fileheader.read(4096)
                     try:
                         masterkeyslt = headers[headers.index(b'mskysslt0X')+len(b'mskysslt0X'):headers.index(b'mskyeslt0X')]
                         encpsval = headers[headers.index(b'pskys0X')+len(b'pskys0X'):headers.index(b'pskye0X')]
                         start = headers.index(b'ds0X')
-                        end = headers.index(b'de0X')
                         hmkey = headers[headers.index(b'hmkys0X')+len(b'hmkys0X'):headers.index(b'hmkye0X')]
                         passconsiv = headers[headers.index(b'pskysiv0X')+len(b'pskysiv0X'):headers.index(b'pskyeiv0X')]
                         hmkeyiv = headers[headers.index(b'hmkysiv0X')+len(b'hmkysiv0X'):headers.index(b'hmkyeiv0X')]
-                        gmactag = headers[headers.index(b'ihgs0X')+len(b'ihgs0X'):headers.index(b'ihge0X')]
                         filext = headers[headers.index(b'tys0X')+len(b'tys0X'):headers.index(b'tye0X')].decode('utf-8').replace(" ","")
                         mainheaders = headers[4:68]
                         masteriv = mainheaders[:16]
                         datacrypt = mainheaders[16:64]
+                        #Seeking TO 112 bytes from the end as the hash lengths are fixed
+                        fileheader.seek(decfilesize-112,0)
+                        end = decfilesize-112
+                        headers = fileheader.read(4096)                        
+                        gmactag = headers[headers.index(b'ihgs0X')+len(b'ihgs0X'):headers.index(b'ihge0X')]
+                        
                     except ValueError as iae:
                         print(Fore.RED+"File Header is Corrupted :(\n Try Recovery Mode"+Fore.RESET)
                         return shell()
-                    decryptfilesize = os.path.getsize(srcfile)
+                    decryptfilesize = decfilesize
                     passkey = getpass.getpass("Enter Decryption Password: ")
                     mixkey = mixpass.passmixer(password=passkey)[:32].encode('utf-8')
                     #Deriveing the Master Key
@@ -470,7 +479,7 @@ try:
                                 # passkey , mixkey , df , decinfo , ekey , ivv , pcmp = 0
                                 outfile.close()
                                 print("\n")
-                                print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(srcfile).replace(".byt",''))
+                                print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
 
                             else:
                                 print("large file mode")
@@ -503,7 +512,7 @@ try:
                                 print("\n")
                                 decryptcipher.finalize()
                                 filedec.close()
-                                print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(srcfile).replace(".byt",''))
+                                print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
                         else:
                             return shell()
                     else:
