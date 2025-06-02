@@ -10,7 +10,7 @@
 
 #Info : Master iv is generated when headercreate function is called
 
-import secrets , time , os , sys
+import secrets , time , os , sys , threading
 import argon2 , hmac , hashlib , base64 as b64
 from cryptography.hazmat.primitives import hashes, serialization , padding as sympadding
 from cryptography.hazmat.primitives.ciphers import Cipher , algorithms , modes
@@ -19,12 +19,16 @@ import time , os , sys , json , io , base64 , getpass , math
 import saltyv2 as mixpass
 import secrets , gc
 from colorama import Fore , Style , Back
+import socket
+from PIL import Image
 
 
 
 
 
-version = "v5.3-5-25-linux-cli"
+
+
+version = "v5.3-5-25-linux-gui"
 
 
 help = """
@@ -34,11 +38,16 @@ showinfo - Show Header Info
 """
 
 
-
 try:
+
+
     passconstant = b'seckeyok'
 
+
     def verify(srcfile:str):
+        """
+        srcfile: Path of the File
+        """
         srcpath = srcfile
         veri = open(srcpath,"rb",buffering=4096)
         veri.seek(0)
@@ -74,7 +83,7 @@ try:
                     print("Password Did not match..retry...")
                     return askpass()
         return genkey
-    
+
     def chkpass(val:bytes):
         #A Decryption Function
         try:
@@ -94,7 +103,9 @@ try:
     def genpass(passw:bytes,saltoriv:bytes):
         #A Decryption/Encryption Function
         """
-        saltoriv: This is the master iv/salt and should be 16 bytes minimum
+        **`passw`**: The actual password used to generate the master key
+
+        **`saltoriv`**: This is the master iv/salt and should be 16 bytes minimum
         """
         tmpmaspas = argon2.hash_password(
             password=passw,
@@ -114,7 +125,6 @@ try:
             themaskey = b64.b64decode(tmpparse)
             return themaskey
         except Exception as eor:
-            print("Master Key generation Failed :( , Line 111")
             return 1
 
 
@@ -122,6 +132,11 @@ try:
 
     def hashverifier(srcfile:str,hmackey:bytes):
         #A Decryption Function
+        """
+        **`srcfile`** - Path to File
+
+        **`hmackey`** - The key to use to verify the hmac hash
+        """
         filecheck = open(srcfile,"rb")
         tmpfilesize = os.path.getsize(filecheck.name)
 
@@ -175,16 +190,23 @@ try:
             print("Error: Hmac Verification Failed :(")
             return 1
 
-    
+
 
 
 
 
     def hashgenerator(filepath:str,encfiletype:str,etag:bytes,hmackey:bytes):
         """
-        smoll -  For Files Under certain size limit (No chunking)
-        
-        biigg -  For Files above certain size which needs (chunking)
+        **`hmackey`** - The key to use to generate the hmac hash
+            
+        **`etag`** - The tag generated after gmac data encryption
+
+        **`encfiletype`** - The type of file
+
+        **`encfiletypes`**:-
+            smoll -  For Files Under certain size limit (No chunking)
+            
+            biigg -  For Files above certain size which needs (chunking)
 
         """
         if encfiletype =="smoll":
@@ -252,8 +274,18 @@ try:
     def headercreate(data:bytes,key:bytes,filetype:bytes,bitcrypt_version:bytes,etype:bytes,hmac_secret_key:bytes):
         #The Headers are always encrypted in AES-CTR
         #Master iv is generated here
-     
+        """
+        **`data`** - The actual data key + data iv
+
+        **`key`** - The password given by saltyv2 algorithm
+
+        **`filetype`** - The type of File ex:-mp4,pdf,jpg
+
+        **`hmac_secret_key`** - The key to use to generate the hmac hash
+        """
+        
         try:
+            #Generating Multiple IV's to encrypt Different Values and avoid IV reuse
             mainiv = os.urandom(16)
             masterkeysalt = os.urandom(16)
             hmkeyiv = os.urandom(16)
@@ -303,11 +335,21 @@ try:
 
 
 
-    def enc(srcfile:str,filename:str):
-        dotcount = filename.count(".")
-        fileextension = filename.split(".")[dotcount]
-        filename = filename.split(".")[0]
-        f = open(filename+".byt","wb")
+    def enc(srcfile:str,folderpath:str):
+        """
+        **`srcfile`** - Path To File
+
+        **`password`** - The Original Typed Password
+
+        **`ipcfile`** - Socket file for IPC Communication
+
+        **`folderpath`** - Folder to save encrypted file in
+        """
+        
+        dotcount = os.path.basename(srcfile).count(".")
+        fileextension = os.path.basename(srcfile).split(".")[dotcount]
+        filename = os.path.basename(srcfile).split(".")[0]
+        f = open(folderpath+"/"+filename+".byt","wb")
         filesize = os.path.getsize(srcfile)
         cryptfilepath = os.path.abspath(filename+".byt")
         try:
@@ -319,7 +361,8 @@ try:
                 if os.path.getsize(srcfile) < 212806066:
 
                     #Small File Mode
-                    print("small file mode")
+                    
+                    print("Small File Mode")
                     hmckey = os.urandom(64)
                     far = headercreate(data=mixdat,key=mixkey,filetype=fileextension.encode('utf-8'),bitcrypt_version=version.encode('utf-8'),etype=b'smoll',hmac_secret_key=hmckey)
                     if far:
@@ -335,58 +378,88 @@ try:
                                 status = "Progress : "+str(tmplog)+" "+"#"*int(tmplog)
                                 sys.stdout.write(f"\r{status}")                                  
                                 sys.stdout.flush()
+                                
                                 #Status Code
+                        status = "Progress : "+str(100)+" "+"#"*int(100)
+                        sys.stdout.write(f"\r{status}")
+                        sys.stdout.flush()
                         encdatacipher.finalize()
                         f.write(b'de0X')
                         f.close()
                         gcmtag = encdatacipher.tag
-                        print("\n")
-                        hashgenerator(filepath=cryptfilepath,encfiletype="smoll",hmackey=hmckey,etag=gcmtag)
+                        smalldone = hashgenerator(filepath=cryptfilepath,encfiletype="smoll",hmackey=hmckey,etag=gcmtag)
+                        
+                        if smalldone != 0:
+                            
+                            print("Error Occured at Small file mode hashgenerator function")
+                    
+                    print(Fore.YELLOW+f"\nEncrypted File Written to {os.path.abspath(filename+'.byt')}"+Fore.RESET)
+
+
+                        
+                
+                
                 else:
                         
-                        #Large File Mode
-                        hmckey = os.urandom(64)
-                        print("Large file mode")
-                        far = headercreate(data=mixdat,key=mixkey,filetype=fileextension.encode('utf-8'),bitcrypt_version=version.encode('utf-8'),etype=b'biigg',hmac_secret_key=hmckey)
-                        if far:
-                            f.write(far)
-                            f.write(b'ds0X')
-                            srcdatafile = open(srcfile,"rb")
-                            gcmcipher = Cipher(algorithm=algorithms.AES256(enckey),mode=modes.GCM(iv)).encryptor()
-                            while True:
-                                curpos = srcdatafile.tell()
-                                if curpos < filesize:
-                                    tmpchunksize = min(4096,filesize-srcdatafile.tell())
-                                    encdata = srcdatafile.read(tmpchunksize)
-                                    f.write(gcmcipher.update(encdata))
-                                    tmpval = curpos/filesize*100
-                                    tmplog = math.floor(tmpval*10)/10
-                                    status = "Progress : "+str(tmplog)+" "+"#"*int(tmplog)
-                                    sys.stdout.write(f"\r{status}")                                  
-                                    sys.stdout.flush()
-                                else:
-                                    break
-                            gcmcipher.finalize()
-                            f.write(b'de0X')
-                            f.close()
-                            gcmfiletag = gcmcipher.tag
-                            done = hashgenerator(filepath=cryptfilepath,encfiletype="biigg",etag=gcmfiletag,hmackey=hmckey)
+                    #Large File Mode
+                    print("Large File Mode")
+                    hmckey = os.urandom(64)
+                    
+                    far = headercreate(data=mixdat,key=mixkey,filetype=fileextension.encode('utf-8'),bitcrypt_version=version.encode('utf-8'),etype=b'biigg',hmac_secret_key=hmckey)
+                    if far:
+                        f.write(far)
+                        f.write(b'ds0X')
+                        srcdatafile = open(srcfile,"rb")
+                        gcmcipher = Cipher(algorithm=algorithms.AES256(enckey),mode=modes.GCM(iv)).encryptor()
+                        while True:
+                            curpos = srcdatafile.tell()
+                            if curpos < filesize:
+                                tmpchunksize = min(4096,filesize-srcdatafile.tell())
+                                encdata = srcdatafile.read(tmpchunksize)
+                                f.write(gcmcipher.update(encdata))
+                                tmpval = curpos/filesize*100
+                                tmplog = math.floor(tmpval*10)/10
+                                status = "Progress : "+str(tmplog)+" "+"#"*int(tmplog)
+                                sys.stdout.write(f"\r{status}")                                  
+                                sys.stdout.flush()
+                                
+                            else:
+                                break
+                        status = "Progress : "+str(100)+" "+"#"*int(100)
+                        sys.stdout.write(f"\r{status}")
+                        sys.stdout.flush()
+                        gcmcipher.finalize()
+                        f.write(b'de0X')
+                        f.close()
+                        gcmfiletag = gcmcipher.tag
+                        done = hashgenerator(filepath=cryptfilepath,encfiletype="biigg",etag=gcmfiletag,hmackey=hmckey)
 
-                            if done !=0:
-                                print("Error Occured at Large file mode hashgenerator function")
-                                                          
+                        if done !=0:
+                            
+                            print("Error Occured at Large file mode hashgenerator function")
+                    # ipcsocket.sendto(f"done:Encrypted File Written to {os.path.abspath(filename+'.byt')}".encode("utf-8"),ipcfile)
+                    print(Fore.YELLOW+f"\nEncrypted File Written to {os.path.abspath(filename+'.byt')}"+Fore.RESET)
+
+                                                            
                             
                 enckey , iv , mixdat , mixkey = 0 , 0 , 0 , 0
-                print("\n")
-                print(Fore.YELLOW+"Encrypted file written to..."+Fore.RESET,os.path.abspath(filename+'.byt'))
             
 
         except Exception as oa:
-            print(oa)
-        
-                
+            
+            print(f"{oa} Happened :(")   
 
-    def dec(srcfile:str):
+    def dec(srcfile:str,folderpath:str):
+        """
+        **`srcfile`** - Path To File
+
+        **`passw`** - The Original Typed Password
+
+        **`ipcfile`** - Socket file for IPC Communication
+
+        **`folderpath`** - Folder to save encrypted file in
+        """
+        
         if os.path.exists(srcfile):
             if os.path.isfile(srcfile):
                 fchk = verify(srcfile=srcfile)
@@ -415,17 +488,18 @@ try:
                         
                     except ValueError as iae:
                         print(Fore.RED+"File Header is Corrupted :(\n Try Recovery Mode"+Fore.RESET)
-                        return shell()
+                        
+
                     decryptfilesize = decfilesize
                     passkey = getpass.getpass("Enter Decryption Password: ")
-                    mixkey = mixpass.passmixer(password=passkey)[:32].encode('utf-8')
+                    mixkey = mixpass.passmixer(password=passkey)[:32].encode("utf-8")
                     #Deriveing the Master Key
                     tmptopkey = genpass(passw=mixkey,saltoriv=masterkeyslt) 
                     if tmptopkey !=1:
                         themasterkey = tmptopkey
                     else:
                         print("Master key Derivation Error")
-                        return shell()
+                        
 
                     #Initializing Ciphers 
                     try:
@@ -434,10 +508,12 @@ try:
                         hmkeydecipher = Cipher(algorithm=algorithms.AES256(themasterkey),mode=modes.CTR(hmkeyiv)).decryptor()
                     except ValueError as us:
                         print(Fore.RED+"File Headers are Corrupted :(\nTry Recovery Mode"+Fore.RESET)
+                        
 
                     passcons = decipher.update(encpsval)
                     if chkpass(passcons) == 0:
                         print(Fore.GREEN+"Correct Password Entered...Decrypting File"+Fore.RESET)
+                        
 
                         tmphmkey = hmkeydecipher.update(hmkey)
                         print("Verifying HMAC File Integrity...")
@@ -446,7 +522,7 @@ try:
                         hashverify = hashverifier(srcfile=srcfile,hmackey=tmphmkey)
 
                         if hashverify ==0:
-                       
+                        
                             #Decrypting File Key and IV
                             decinfo = datadecipher.update(datacrypt)
                             datadecipher.finalize()
@@ -470,16 +546,23 @@ try:
                                             status = "Progress : "+str(tmplog)+" "+"#"*int(tmplog)
                                             sys.stdout.write(f"\r{status}")                                  
                                             sys.stdout.flush()
+                                            
+
                                         pcmp.finalize()
                                         
                                     except InvalidTag as excep:
                                         print(Fore.RED+"\nData Has Been Corrupted :("+Fore.RESET)
                                         print("Error: GCM Verification Failed")
                                         
+                                        
                                 # passkey , mixkey , df , decinfo , ekey , ivv , pcmp = 0
+                                status = "Progress : "+str(100)+" "+"#"*int(100)
+                                sys.stdout.write(f"\r{status}")
+                                sys.stdout.flush()
                                 outfile.close()
                                 print("\n")
                                 print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
+                                
 
                             else:
                                 print("large file mode")
@@ -501,100 +584,111 @@ try:
                                                 status = "Progress : "+str(tmplog)+" "+"#"*int(tmplog)
                                                 sys.stdout.write(f"\r{status}")                                  
                                                 sys.stdout.flush()
+                                                
+                                                
                                         else:
                                             break
 
                                 except InvalidTag as eis:
                                         print(Fore.RED+"\nData Has Been Corrupted :("+Fore.RESET)
                                         print("Error: GCM Verification Failed")
+                                        
+                                except Exception as ieae:
+                                        
+                                        print(ieae)
 
                                 # passkey , mixkey , df , decinfo , ekey , ivv = 0
+                                status = "Progress : "+str(100)+" "+"#"*int(100)
+                                sys.stdout.write(f"\r{status}")
+                                sys.stdout.flush()
                                 print("\n")
                                 decryptcipher.finalize()
                                 filedec.close()
                                 print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
+                                
                         else:
-                            return shell()
+                            print("Hash Verification Failed")
+                            
+
                     else:
                         print(Fore.RED+"Wrong Password Entered :("+Fore.RESET)
+                        
 
                 else:
                     print(Fore.RED+"Your file has been corrupted\nNot a BitCrypt File :("+Fore.RED)
+                    
 
     def shell():
-        d = input(Fore.GREEN+"BitCrypt> "+Fore.RESET)
+            d = input(Fore.GREEN+"BitCrypt> "+Fore.RESET)
 
-        if d =="help":
-            print(help)
+            if d =="help":
+                print(help)
 
-        elif d =="version" or d =="v":
-            print(version)
+            elif d =="version" or d =="v":
+                print(version)
 
-        elif d =="enc":
-            p = input("Enter Normal File path: ")
-            if os.path.exists(p):
-                if os.path.isfile(p):
+            elif d =="enc":
+                p = input("Enter Normal File path: ")
+                if os.path.exists(p):
+                    if os.path.isfile(p):
 
-                    if os.name =="posix":
-                        basename = os.path.basename(p)
-                        enc(p,basename)
+                        if os.name =="posix":
+                            basename = os.path.basename(p)
+                            enc(p,basename,os.path.dirname(p))
 
 
 
-                    elif os.name =="nt":
-                        basename = os.path.basename(p)
-                        enc(p,basename)
+                        elif os.name =="nt":
+                            basename = os.path.basename(p)
+                            enc(p,basename)
+
+
+                        else:
+                            print("We dont support this os...")
 
 
                     else:
-                        print("We dont support this os...")
-
-
+                        print("The file path is a folder..not a file..:(")
                 else:
-                    print("The file path is a folder..not a file..:(")
-            else:
-                print("File path ",p,"Does not exist :(")
-                
-        elif d =='dec':
-            da = input("Enter BitCrypt File path: ")
-            if os.path.exists(da):
-                if os.path.isfile(da):
-                    dec(srcfile=da)
+                    print("File path ",p,"Does not exist :(")
+                    
+            elif d =='dec':
+                da = input("Enter BitCrypt File path: ")
+                if os.path.exists(da):
+                    if os.path.isfile(da):
+                        dec(srcfile=da,folderpath=os.path.dirname(da))
+                    else:
+                        print("path is not file...:(")
                 else:
-                    print("path is not file...:(")
+                    print("Path doesn't exist...:(")
+
+            elif d =="showinfo":
+                dae = input("Enter BitCrypt File Path: ")
+                if os.path.isfile(dae):
+                    headerinfo(dae)
+
+            elif d =="author":
+                print("https://github.com/shad0wrider")
+
+
+            elif d =="clear":
+                os.system("clear")
+
+            elif d =="exit":
+                sys.exit(0)
+            
             else:
-                print("Path doesn't exist...:(")
+                print("Invalid Option",d)
+            
 
-        elif d =="showinfo":
-            dae = input("Enter BitCrypt File Path: ")
-            if os.path.isfile(dae):
-                headerinfo(dae)
-
-        elif d =="author":
-            print("https://github.com/shad0wrider")
-
-
-        elif d =="clear":
-            os.system("clear")
-
-        elif d =="exit":
-            sys.exit(0)
-        
-        else:
-            print("Invalid Option",d)
-        
-
-        return shell()
-
+            return shell()
     shell()
 
-# except ValueError as ss:
-#     print(Fore.RED+"Wrong Password Entered.."+Fore.RESET)
-#     shell()
-
-except Exception as aps:
-    print(aps,"occured...")
+except Exception as eror:
+    print(Fore.RED+f"{eror} Occured"+Fore.RESET)
     shell()
 
-except KeyboardInterrupt as ao:
-    print("Exiting..on keyboard interrupt..")
+except KeyboardInterrupt as whatevs:
+    print("Exiting...")
+    sys.exit(0)
+
