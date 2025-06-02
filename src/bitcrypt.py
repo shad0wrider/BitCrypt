@@ -24,7 +24,7 @@ from colorama import Fore , Style , Back
 
 
 
-version = "v5.3-5-25-linux-gui"
+version = "v5.3-5-25-linux-cli"
 
 
 help = """
