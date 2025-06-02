@@ -20,8 +20,6 @@ import saltyv2 as mixpass
 import secrets , gc
 from colorama import Fore , Style , Back
 import socket
-from PIL import Image
-
 
 
 
