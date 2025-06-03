@@ -20,13 +20,15 @@ import saltyv2 as mixpass
 import secrets , gc
 from colorama import Fore , Style , Back
 import socket
+from PIL import Image
 
 
 
 
 
 
-version = "v5.3-5-25-linux-gui"
+
+version = "v5.3-5-25-linux-cli"
 
 
 help = """
@@ -349,7 +351,7 @@ try:
         filename = os.path.basename(srcfile).split(".")[0]
         f = open(folderpath+"/"+filename+".byt","wb")
         filesize = os.path.getsize(srcfile)
-        cryptfilepath = os.path.abspath(filename+".byt")
+        cryptfilepath = os.path.abspath(folderpath+"/"+filename+".byt")
         try:
             mixkey = askpass()
             if mixkey :
@@ -391,7 +393,7 @@ try:
                             
                             print("Error Occured at Small file mode hashgenerator function")
                     
-                    print(Fore.YELLOW+f"\nEncrypted File Written to {os.path.abspath(filename+'.byt')}"+Fore.RESET)
+                    print(Fore.YELLOW+f"\nEncrypted File Written to {os.path.abspath(folderpath+"/"+filename+".byt")}"+Fore.RESET)
 
 
                         
@@ -436,7 +438,7 @@ try:
                             
                             print("Error Occured at Large file mode hashgenerator function")
                     # ipcsocket.sendto(f"done:Encrypted File Written to {os.path.abspath(filename+'.byt')}".encode("utf-8"),ipcfile)
-                    print(Fore.YELLOW+f"\nEncrypted File Written to {os.path.abspath(filename+'.byt')}"+Fore.RESET)
+                    print(Fore.YELLOW+f"\nEncrypted File Written to {os.path.abspath(folderpath+"/"+filename+".byt")}"+Fore.RESET)
 
                                                             
                             
@@ -632,13 +634,13 @@ try:
 
                         if os.name =="posix":
                             basename = os.path.basename(p)
-                            enc(p,basename,os.path.dirname(p))
+                            enc(p,os.path.dirname(p))
 
 
 
                         elif os.name =="nt":
                             basename = os.path.basename(p)
-                            enc(p,basename)
+                            enc(p,os.path.dirname(p))
 
 
                         else:
@@ -689,4 +691,3 @@ except Exception as eror:
 except KeyboardInterrupt as whatevs:
     print("Exiting...")
     sys.exit(0)
-
