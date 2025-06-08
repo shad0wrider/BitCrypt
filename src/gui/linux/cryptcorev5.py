@@ -372,7 +372,7 @@ def enc(srcfile:str,password:str,ipcfile,folderpath:str):
                             f.write(datatocrypt)
                             #Status Code
                             tmpval = fileread.tell()/filesize*100
-                            ipcsocket.sendto(f"info:{tmpval}".encode("utf-8"),ipcfile)
+                            ipcsocket.sendto(f"info:{tmpval}%".encode("utf-8"),ipcfile)
                             #Status Code
                     encdatacipher.finalize()
                     f.write(b'de0X')
