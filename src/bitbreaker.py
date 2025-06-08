@@ -4,6 +4,10 @@ import os , sys , io , math
 #Run a file Encrypted using BitCrypt through this program and it writes half of the encrypted data to a new file
 #Try to decrypt that new file with BitCrypt and the HMAC integrity of that file will fail
 
+#THIS CODE DOES NOT BREAK ANY SORT OF ENCRYPTION , this code only simulates what errors BitCrypt Would throw if it tried to Decrypt a Corrupt or Tampered File
+
+#Not for Noobs , Don't try running this if you don't understand what cryptography is.
+
 
 f = input("Enter File to Corrupt: ")
 
