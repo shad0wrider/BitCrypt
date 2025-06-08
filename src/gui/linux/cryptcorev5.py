@@ -350,7 +350,7 @@ def enc(srcfile:str,password:str,ipcfile,folderpath:str):
     filename = os.path.basename(srcfile).split(".")[0]
     f = open(folderpath+"/"+filename+".byt","wb")
     filesize = os.path.getsize(srcfile)
-    cryptfilepath = os.path.abspath(filename+".byt")
+    cryptfilepath = os.path.abspath(folderpath+"/"+filename+".byt")
     try:
         mixkey = mixpass.passmixer(password)[:32].encode('utf-8')
         if mixkey :
