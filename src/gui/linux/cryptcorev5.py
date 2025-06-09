@@ -20,7 +20,6 @@ import saltyv2 as mixpass
 import secrets , gc
 from colorama import Fore , Style , Back
 import socket
-from PIL import Image
 
 
 
@@ -28,7 +27,7 @@ from PIL import Image
 
 
 
-version = "v5.3-5-25-linux-gui"
+version = "v5.10-6-25-linux-gui"
 
 
 help = """
@@ -177,16 +176,16 @@ def hashverifier(srcfile:str,hmackey:bytes):
                 else:
                     break
             if hmac.compare_digest(filehmachash,calculatehmac.digest()):
-                print(Fore.GREEN+"HMAC Integrity Check: Passed"+Fore.RESET)
+                #print(Fore.GREEN+"HMAC Integrity Check: Passed"+Fore.RESET)
                 return 0
             else:
-                print(Fore.RED+"HMAC Integrity Check: Failed"+Fore.RESET)
+                #print(Fore.RED+"HMAC Integrity Check: Failed"+Fore.RESET)
                 return 1
 
 
     except ValueError as ia:
-        print("File is Corrupted")
-        print("Error: Hmac Verification Failed :(")
+        # print("File is Corrupted")
+        # print("Error: Hmac Verification Failed :(")
         return 1
 
 
@@ -227,7 +226,6 @@ def hashgenerator(filepath:str,encfiletype:str,etag:bytes,hmackey:bytes):
             hashfilewrite.write(hashcontent)
             hashfilewrite.close()
             #Done Appending Hmac Hash to File
-            print("\nHmac File Hash Written")
             return 0
         except Exception as error:
             print(error)
@@ -263,7 +261,6 @@ def hashgenerator(filepath:str,encfiletype:str,etag:bytes,hmackey:bytes):
             hashfilewrite.write(hashcontent)
             hashfilewrite.close()
             #Done Appending Hmac Hash to File
-            print("\nHmac File Hash Written")
             return 0
         except Exception as oe:
             print(oe)
@@ -382,7 +379,7 @@ def enc(srcfile:str,password:str,ipcfile,folderpath:str):
                     
                     if smalldone != 0:
                         ipcsocket.sendto("error:Error Occured at Small file mode hashgenerator function".encode("utf-8"),ipcfile)
-                ipcsocket.sendto(f"done:Encrypted File Written to {os.path.abspath(filename+'.byt')}".encode("utf-8"),ipcfile)
+                ipcsocket.sendto(f"done:Encrypted File Written to \n{os.path.abspath(filename+'.byt')}".encode("utf-8"),ipcfile)
 
                       
             
@@ -416,7 +413,7 @@ def enc(srcfile:str,password:str,ipcfile,folderpath:str):
 
                     if done !=0:
                         ipcsocket.sendto("error:Error Occured at Large file mode hashgenerator function".encode("utf-8"),ipcfile)
-                ipcsocket.sendto(f"done:Encrypted File Written to {os.path.abspath(filename+'.byt')}".encode("utf-8"),ipcfile)
+                ipcsocket.sendto(f"done:Encrypted File Written to \n{os.path.abspath(filename+'.byt')}".encode("utf-8"),ipcfile)
                                                         
                         
             enckey , iv , mixdat , mixkey = 0 , 0 , 0 , 0
@@ -442,7 +439,7 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
             fchk = verify(srcfile=srcfile)
             if fchk ==0:
                 #Reading the Headers and decrypting the File Key
-                print(Fore.GREEN+"File is a BitCrypt File"+Fore.RESET)
+                # print(Fore.GREEN+"File is a BitCrypt File"+Fore.RESET)
                 fileheader = open(srcfile,"rb")
                 decfilesize = os.path.getsize(fileheader.name)
                 headers = fileheader.read(4096)
@@ -483,17 +480,13 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                     datadecipher = Cipher(algorithm=algorithms.AES256(themasterkey),mode=modes.CTR(masteriv)).decryptor()
                     hmkeydecipher = Cipher(algorithm=algorithms.AES256(themasterkey),mode=modes.CTR(hmkeyiv)).decryptor()
                 except ValueError as us:
-                    print(Fore.RED+"File Headers are Corrupted :(\nTry Recovery Mode"+Fore.RESET)
                     ipcsocket.sendto("error:File Headers are Corrupted :(\nTry Recovery Mode".encode("utf-8"),ipcfile)
 
                 passcons = decipher.update(encpsval)
                 if chkpass(passcons) == 0:
-                    print(Fore.GREEN+"Correct Password Entered...Decrypting File"+Fore.RESET)
                     ipcsocket.sendto("info:Correct Password Entered...Decrypting File".encode("utf-8"),ipcfile)
 
                     tmphmkey = hmkeydecipher.update(hmkey)
-                    print("Verifying HMAC File Integrity...")
-
                     #Verifying Layer 2 Integrity via HMAC
                     hashverify = hashverifier(srcfile=srcfile,hmackey=tmphmkey)
 
@@ -509,7 +502,7 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                         filename = os.path.basename(srcfile).split(".")[0]
                         #Decryption Mode
                         if os.path.getsize(srcfile) < 212806066:
-                            print("Small file mode")
+                            #Small file mode
                             with open(filename+"."+filext,'wb') as outfile:
                                 filedata = io.BytesIO(headers[headers.index(b'ds0X')+len(b'ds0X'):headers.index(b'de0X')])
                                 try:                                        
@@ -523,18 +516,16 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                                     pcmp.finalize()
                                     
                                 except InvalidTag as excep:
-                                    print(Fore.RED+"\nData Has Been Corrupted :("+Fore.RESET)
-                                    print("Error: GCM Verification Failed")
                                     ipcsocket.sendto("error:GCM Verification Failed\nData Has Been Corrupted".encode("utf-8"),ipcfile)
                                     
                             # passkey , mixkey , df , decinfo , ekey , ivv , pcmp = 0
                             outfile.close()
                             # print("\n")
                             # print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
-                            ipcsocket.sendto(f"done:Decrypted file written to...{os.path.abspath(filename+"."+filext)}".encode("utf-8"),ipcfile)
+                            ipcsocket.sendto(f"done:Decrypted file written to\n{os.path.abspath(filename+"."+filext)}".encode("utf-8"),ipcfile)
 
                         else:
-                            print("large file mode")
+                            #Large File Mode
                             filedec =  open(filename+"."+filext,'wb')
                             filedata = fileheader
                             filedata.seek(start+4)
@@ -544,19 +535,17 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                                     filepointer = filedata.tell()
                                     if filepointer < end:
                                         
-                                            chunksize = min(4096,end-filepointer)
-                                            tmpdata = filedata.read(chunksize)
-                                            decryptedata = decryptcipher.update(tmpdata)
-                                            filedec.write(decryptedata)
-                                            tmpval = filepointer/end*100
-                                            ipcsocket.sendto(f"info:{tmpval}%".encode("utf-8"),ipcfile)                               
+                                        chunksize = min(4096,end-filepointer)
+                                        tmpdata = filedata.read(chunksize)
+                                        decryptedata = decryptcipher.update(tmpdata)
+                                        filedec.write(decryptedata)
+                                        tmpval = filepointer/end*100
+                                        ipcsocket.sendto(f"info:{tmpval}%".encode("utf-8"),ipcfile)                               
                                             
                                     else:
                                         break
 
                             except InvalidTag as eis:
-                                    print(Fore.RED+"\nData Has Been Corrupted :("+Fore.RESET)
-                                    print("Error: GCM Verification Failed")
                                     ipcsocket.sendto("error:GCM Verification Failed".encode("utf-8"),ipcfile)
                             except Exception as ieae:
                                     ipcsocket.sendto(f"error:{ieae} Happened".encode("utf-8"),ipcfile)
@@ -565,20 +554,12 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                             print("\n")
                             decryptcipher.finalize()
                             filedec.close()
-                            print(Fore.YELLOW+"Decrypted file written to..."+Fore.RESET,os.path.abspath(filename+"."+filext))
-                            ipcsocket.sendto(f"done:Decrypted file written to...{os.path.abspath(filename+"."+filext)}".encode("utf-8"),ipcfile)
+                            ipcsocket.sendto(f"done:Decrypted file written to\n{os.path.abspath(filename+"."+filext)}".encode("utf-8"),ipcfile)
                     else:
-                        print("Hash Verification Failed")
-                        ipcsocket.sendto("error:Hash Verification Failed".encode("utf-8"),ipcfile)
+                        ipcsocket.sendto("error:File Integrity Check Failed".encode("utf-8"),ipcfile)
 
                 else:
-                    print(Fore.RED+"Wrong Password Entered :("+Fore.RESET)
                     ipcsocket.sendto("error:Wrong Password Entered".encode("utf-8"),ipcfile)
 
             else:
-                print(Fore.RED+"Your file has been corrupted\nNot a BitCrypt File :("+Fore.RED)
-                ipcsocket.sendto("done:Your File has been corrupted\nNot a BitCrypt File :(".encode("utf-8"),ipcfile)
-
-
-
-
+                ipcsocket.sendto("error:Your File has been corrupted\nNot a BitCrypt File :(".encode("utf-8"),ipcfile)
