@@ -43,10 +43,5 @@ This Tool provides an easy way to encrypt files locally, so you can securely upl
   <img src="https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img3.png" alt="Image 3" style="width: 30%; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease; cursor: pointer;">
 </div>
 
-<style>
-  div img:hover {
-    transform: scale(1.1); /* Slightly enlarge the image on hover */
-  }
-</style>
 
 
