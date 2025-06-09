@@ -34,3 +34,8 @@ This Tool provides an easy way to encrypt files locally, so you can securely upl
 5.secrets
 
 6.getpass
+
+
+**Images**
+
+<image src="https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img1.png" type=jpg>
