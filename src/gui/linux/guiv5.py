@@ -409,7 +409,7 @@ try:
 
         header = CTkLabel(master=app,width=200,height=50,text="BitCrypt",font=CTkFont(size=23),corner_radius=15)
         app.grid_columnconfigure(0, weight=1)
-        header.grid(column=0,row=0,padx=40,pady=40,sticky="ew")
+        header.grid(column=0,row=0,padx=40,pady=30,sticky="ew")
 
         mainframe = CTkFrame(master=app,width=100,height=250,corner_radius=15,bg_color="transparent")
         mainframe.grid(column=0,row=4,padx=60,pady=100,sticky="ew")
