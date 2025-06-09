@@ -36,7 +36,7 @@ This Tool provides an easy way to encrypt files locally, so you can securely upl
 6.getpass
 
 
-**Images**
+# **Images**
 
 <br>
 
