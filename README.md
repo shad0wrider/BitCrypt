@@ -37,11 +37,8 @@ This Tool provides an easy way to encrypt files locally, so you can securely upl
 
 
 # **Images**
-<div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
-  <img src="https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img1.png" alt="Image 1" style="width: 30%; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease; cursor: pointer;">
-  <img src="https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img2.png" alt="Image 2" style="width: 30%; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease; cursor: pointer;">
-  <img src="https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img3.png" alt="Image 3" style="width: 30%; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease; cursor: pointer;">
-</div>
+| ![Image 1](https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img1.png) | ![Image 2](https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img2.png) | ![Image 3](https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img3.png) |
+|---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
 
 
 
