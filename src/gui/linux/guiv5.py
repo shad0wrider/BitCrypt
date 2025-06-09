@@ -1,3 +1,9 @@
+#This is BitCrypt v5 gui
+#By https://github.com/shad0wrider
+#Can encrypt small to large files efficiently and securely
+
+
+
 from customtkinter import *
 import os , time , sys , multiprocessing as mproc , subprocess as sp
 import socket , secrets , math , sys
