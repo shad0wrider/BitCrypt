@@ -38,4 +38,6 @@ This Tool provides an easy way to encrypt files locally, so you can securely upl
 
 **Images**
 
+<br>
+
 <image src="https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/img1.png" type=jpg>
