@@ -442,7 +442,7 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                 # print(Fore.GREEN+"File is a BitCrypt File"+Fore.RESET)
                 fileheader = open(srcfile,"rb")
                 decfilesize = os.path.getsize(fileheader.name)
-                headers = fileheader.read(4096)
+                headers = fileheader.read()
                 try:
                     masterkeyslt = headers[headers.index(b'mskysslt0X')+len(b'mskysslt0X'):headers.index(b'mskyeslt0X')]
                     encpsval = headers[headers.index(b'pskys0X')+len(b'pskys0X'):headers.index(b'pskye0X')]
@@ -456,8 +456,7 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                     datacrypt = mainheaders[16:64]
                     #Seeking TO 112 bytes from the end as the hash lengths are fixed
                     fileheader.seek(decfilesize-112,0)
-                    end = decfilesize-112
-                    headers = fileheader.read(4096)                        
+                    end = decfilesize-112                      
                     gmactag = headers[headers.index(b'ihgs0X')+len(b'ihgs0X'):headers.index(b'ihge0X')]
                     
                 except ValueError as iae:
