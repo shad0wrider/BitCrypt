@@ -6,7 +6,7 @@
 #Whats New: -- 1.Uses Gmac + Hmac for large and small file verification for checking File Integrity
 #              2.Uses New Extremely Efficient Password Extending Algorithm saltyV3
 #              3.Using sha3_512 with 64 bit hmac key , somewhat quantam secure...
-#              4.Dropped AES-CBC alltogether
+#              4.Dropped AES-CBC cipher alltogether
 
 #Info : Master iv is generated when headercreate function is called
 
