@@ -3,13 +3,13 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'   # triggers when you push tags like v1.0.0
+      - 'v*'   # Run only when you push a tag like v1.0.0
 
 permissions:
-  contents: write   # REQUIRED to create releases
+  contents: write   # Required for creating releases
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,32 +23,12 @@ jobs:
           script-name: src/cli/linux/bitcryptv5.py
           standalone: true
 
-      - name: List build output (debug)
-        run: ls -R
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build
-          path: |
-            build/
-            dist/
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build
-          path: build
-
-      - name: List downloaded files (debug)
-        run: ls -R build
+      - name: Debug build output
+        run: |
+          echo "=== FILE STRUCTURE ==="
+          ls -R
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/**/*
+          files: build/bitcryptv5.bin
