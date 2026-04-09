@@ -23,7 +23,7 @@ import socket
 
 
 
-version = "v5.3-5-25-linux-cli"
+version = "v6.10-4-26"
 
 
 help = """
@@ -55,6 +55,48 @@ try:
             return 0
         else:
             return 1
+        
+
+    def get_headers(infile:str,/) -> bytes:
+        """
+        **`infile`**: The file whose header needs to be returned
+        
+        """
+        previousdata = b""
+        hspos = 0
+        hepos = 0
+        totalread = 0
+        tmpfile = open(infile,"rb")
+        while x := tmpfile.read(4096):
+            try:
+                if hspos != 0 and hepos == 0:
+                    combined = previousdata+x
+                    tmphepos = combined.index(b"he0X")+len(b"he0X")
+                    hepos = tmphepos
+                    break
+
+                else:
+                    combined = previousdata+x
+                    tmphspos = combined.index(b"hs0X")+len(b"hs0X")
+                    hspos = tmphspos
+                
+                totalread+= len(x)
+                previousdata = x
+
+            
+                
+            except (IndexError,ValueError) as ie:
+                totalread+= len(x)
+                previousdata+= x
+                print("Not Found")
+                continue
+
+        heposfinal = totalread - len(previousdata) + hepos
+        tmpfile.seek(hspos-4,0)
+        start_heads = tmpfile.read(heposfinal+4)
+        tmpfile.seek(os.path.getsize(tmpfile.name)-112,0)
+        end_heads = tmpfile.read(112)
+        return(start_heads+end_heads)
 
 
 
@@ -312,7 +354,8 @@ try:
             if os.path.isfile(filepath):
                 print("Getting Header Info...")
                 if verify(filepath) ==0:
-                    headread = open(filepath,"rb").read()
+                    header_info = get_headers(filepath)
+                    headread = header_info
                     filetype = headread[headread.index(b'tys0X')+len(b'tys0X'):headread.index(b'tye0X')]
                     appversion = headread[headread.index(b'bvs0X')+len(b'bvs0X'):headread.index(b'bve0X')]
                     enctype = headread[headread.index(b'extys0X')+len(b'extys0X'):headread.index(b'extye0X')]
@@ -463,7 +506,7 @@ try:
                     print(Fore.GREEN+"File is a BitCrypt File"+Fore.RESET)
                     fileheader = open(srcfile,"rb")
                     decfilesize = os.path.getsize(fileheader.name)
-                    headers = fileheader.read()
+                    headers = get_headers(srcfile)
                     try:
                         masterkeyslt = headers[headers.index(b'mskysslt0X')+len(b'mskysslt0X'):headers.index(b'mskyeslt0X')]
                         encpsval = headers[headers.index(b'pskys0X')+len(b'pskys0X'):headers.index(b'pskye0X')]
@@ -476,7 +519,6 @@ try:
                         masteriv = mainheaders[:16]
                         datacrypt = mainheaders[16:64]
                         #Seeking TO 112 bytes from the end as the hash lengths are fixed
-                        fileheader.seek(decfilesize-112,0)
                         end = decfilesize-112                     
                         gmactag = headers[headers.index(b'ihgs0X')+len(b'ihgs0X'):headers.index(b'ihge0X')]
                         
