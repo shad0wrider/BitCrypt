@@ -88,7 +88,6 @@ try:
             except (IndexError,ValueError) as ie:
                 totalread+= len(x)
                 previousdata+= x
-                print("Not Found")
                 continue
 
         heposfinal = totalread - len(previousdata) + hepos
@@ -97,6 +96,9 @@ try:
         tmpfile.seek(os.path.getsize(tmpfile.name)-112,0)
         end_heads = tmpfile.read(112)
         return(start_heads+end_heads)
+    
+    def get_data_position(infile:str,/) -> set:
+        pass
 
 
 
