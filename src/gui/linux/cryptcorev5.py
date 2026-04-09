@@ -27,7 +27,7 @@ import socket
 
 
 
-version = "v5.10-6-25-linux-gui"
+version = "v6.10-4-26-linux-gui"
 
 
 help = """
@@ -96,6 +96,78 @@ def chkpass(val:bytes):
     
 def recovery():
     pass
+
+
+
+def get_data_position(infile:str):
+
+    previousdata = b""
+    dspos = 0
+    depos = 0
+    totalread = 0
+    tmpfile = open(infile,"rb")
+    depos = os.path.getsize(tmpfile.name)-112
+    while x := tmpfile.read(4096):
+        try:
+            
+            if depos != 0 and dspos == 0:
+                data_start = x.index(b"ds0X")+len(b"ds0X")
+                dspos = data_start
+                break
+            
+            totalread+= len(x)
+            previousdata = x
+        
+            
+        except (IndexError,ValueError) as ie:
+            totalread+= len(x)
+            previousdata+= x
+            continue
+
+    dsposfinal = totalread - len(previousdata) + data_start
+    return [dsposfinal,depos]
+
+        
+
+def get_headers(infile:str,/) -> bytes:
+    """
+    **`infile`**: The file whose header needs to be returned
+    
+    """
+    previousdata = b""
+    hspos = 0
+    hepos = 0
+    totalread = 0
+    tmpfile = open(infile,"rb")
+    while x := tmpfile.read(4096):
+        try:
+            if hspos != 0 and hepos == 0:
+                combined = previousdata+x
+                tmphepos = combined.index(b"he0X")+len(b"he0X")
+                hepos = tmphepos
+                break
+
+            else:
+                combined = previousdata+x
+                tmphspos = combined.index(b"hs0X")+len(b"hs0X")
+                hspos = tmphspos
+            
+            totalread+= len(x)
+            previousdata = x
+
+        
+            
+        except (IndexError,ValueError) as ie:
+            totalread+= len(x)
+            previousdata+= x
+            continue
+
+    heposfinal = totalread - len(previousdata) + hepos
+    tmpfile.seek(hspos-4,0)
+    start_heads = tmpfile.read(heposfinal+4)
+    tmpfile.seek(os.path.getsize(tmpfile.name)-112,0)
+    end_heads = tmpfile.read(112)
+    return(start_heads+end_heads)
 
 
 def genpass(passw:bytes,saltoriv:bytes):
@@ -313,7 +385,7 @@ def headerinfo(filepath:str):
         if os.path.isfile(filepath):
             print("Getting Header Info...")
             if verify(filepath) ==0:
-                headread = open(filepath,"rb").read()
+                headread = get_headers(filepath)
                 filetype = headread[headread.index(b'tys0X')+len(b'tys0X'):headread.index(b'tye0X')]
                 appversion = headread[headread.index(b'bvs0X')+len(b'bvs0X'):headread.index(b'bve0X')]
                 enctype = headread[headread.index(b'extys0X')+len(b'extys0X'):headread.index(b'extye0X')]
@@ -442,11 +514,12 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                 # print(Fore.GREEN+"File is a BitCrypt File"+Fore.RESET)
                 fileheader = open(srcfile,"rb")
                 decfilesize = os.path.getsize(fileheader.name)
-                headers = fileheader.read()
+                headers = get_headers(srcfile)
+                data_pos = get_data_position(srcfile)
                 try:
                     masterkeyslt = headers[headers.index(b'mskysslt0X')+len(b'mskysslt0X'):headers.index(b'mskyeslt0X')]
                     encpsval = headers[headers.index(b'pskys0X')+len(b'pskys0X'):headers.index(b'pskye0X')]
-                    start = headers.index(b'ds0X')
+                    start = data_pos[0]
                     hmkey = headers[headers.index(b'hmkys0X')+len(b'hmkys0X'):headers.index(b'hmkye0X')]
                     passconsiv = headers[headers.index(b'pskysiv0X')+len(b'pskysiv0X'):headers.index(b'pskyeiv0X')]
                     hmkeyiv = headers[headers.index(b'hmkysiv0X')+len(b'hmkysiv0X'):headers.index(b'hmkyeiv0X')]
@@ -456,7 +529,7 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                     datacrypt = mainheaders[16:64]
                     #Seeking TO 112 bytes from the end as the hash lengths are fixed
                     fileheader.seek(decfilesize-112,0)
-                    end = decfilesize-112                      
+                    end = data_pos[1]                      
                     gmactag = headers[headers.index(b'ihgs0X')+len(b'ihgs0X'):headers.index(b'ihge0X')]
                     
                 except ValueError as iae:
@@ -527,7 +600,7 @@ def dec(srcfile:str,passw:str,ipcfile,folderpath:str):
                             #Large File Mode
                             filedec =  open(filename+"."+filext,'wb')
                             filedata = fileheader
-                            filedata.seek(start+4)
+                            filedata.seek(start)
                             try:
                                 decryptcipher = Cipher(algorithm=algorithms.AES256(ekey),mode=modes.GCM(ivv,gmactag)).decryptor()
                                 while True:

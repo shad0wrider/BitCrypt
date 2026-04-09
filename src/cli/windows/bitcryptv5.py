@@ -27,7 +27,7 @@ import socket
 
 
 
-version = "v5.3-5-25-windows-cli"
+version = "v6.10-4-26-windows-cli"
 
 
 help = """
@@ -59,6 +59,39 @@ try:
             return 0
         else:
             return 1
+        
+
+    def get_data_position(infile:str):
+
+        previousdata = b""
+        dspos = 0
+        depos = 0
+        totalread = 0
+        tmpfile = open(infile,"rb")
+        depos = os.path.getsize(tmpfile.name)-112
+        while x := tmpfile.read(4096):
+            try:
+                
+                if depos != 0 and dspos == 0:
+                    data_start = x.index(b"ds0X")+len(b"ds0X")
+                    dspos = data_start
+                    break
+                
+                totalread+= len(x)
+                previousdata = x
+            
+                
+            except (IndexError,ValueError) as ie:
+                totalread+= len(x)
+                previousdata+= x
+                continue
+
+        dsposfinal = totalread - len(previousdata) + data_start
+        return [dsposfinal,depos]
+        
+
+    
+
         
     def get_headers(infile:str,/) -> bytes:
         """
@@ -511,10 +544,11 @@ try:
                     decfilesize = os.path.getsize(fileheader.name)
                     header_info = get_headers(srcfile)
                     headers = header_info
+                    data_postions = get_data_position(srcfile)
                     try:
                         masterkeyslt = headers[headers.index(b'mskysslt0X')+len(b'mskysslt0X'):headers.index(b'mskyeslt0X')]
                         encpsval = headers[headers.index(b'pskys0X')+len(b'pskys0X'):headers.index(b'pskye0X')]
-                        start = headers.index(b'ds0X')
+                        start = data_postions[0]
                         hmkey = headers[headers.index(b'hmkys0X')+len(b'hmkys0X'):headers.index(b'hmkye0X')]
                         passconsiv = headers[headers.index(b'pskysiv0X')+len(b'pskysiv0X'):headers.index(b'pskyeiv0X')]
                         hmkeyiv = headers[headers.index(b'hmkysiv0X')+len(b'hmkysiv0X'):headers.index(b'hmkyeiv0X')]
@@ -523,7 +557,7 @@ try:
                         masteriv = mainheaders[:16]
                         datacrypt = mainheaders[16:64]
                         #Seeking TO 112 bytes from the end as the hash lengths are fixed
-                        end = decfilesize-112                      
+                        end = data_postions[1]                     
                         gmactag = headers[headers.index(b'ihgs0X')+len(b'ihgs0X'):headers.index(b'ihge0X')]
                         
                     except ValueError as iae:
@@ -608,7 +642,7 @@ try:
                                 print("large file mode")
                                 filedec =  open(filename+"."+filext,'wb')
                                 filedata = fileheader
-                                filedata.seek(start+4)
+                                filedata.seek(start)
                                 try:
                                     decryptcipher = Cipher(algorithm=algorithms.AES256(ekey),mode=modes.GCM(ivv,gmactag)).decryptor()
                                     while True:
