@@ -1,15 +1,19 @@
-name: Build with Nuitka
+name: Build and Release
 
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*'   # triggers when you push tags like v1.0.0
+
+permissions:
+  contents: write   # REQUIRED to create releases
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Build with Nuitka
@@ -17,3 +21,34 @@ jobs:
         with:
           nuitka-version: main
           script-name: src/cli/linux/bitcryptv5.py
+          standalone: true
+
+      - name: List build output (debug)
+        run: ls -R
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: |
+            build/
+            dist/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: build
+
+      - name: List downloaded files (debug)
+        run: ls -R build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/**/*
