@@ -1,4 +1,4 @@
-# ![Image 1](https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/v6cli.png) | ![Image 2](https://github.com/shad0wrider/BitCrypt/blob/main/assets/img1.png)
+# ![Image 1](https://raw.githubusercontent.com/shad0wrider/BitCrypt/refs/heads/main/assets/outwput.gif)
 #
 This is **BitCrypt** , A program that can efficiently and securely encrypt your files 
 
